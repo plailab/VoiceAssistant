@@ -14,6 +14,37 @@ from livekit.agents import (
 from livekit.agents.multimodal import MultimodalAgent
 from livekit.plugins import openai
 
+import aiohttp # do I need to download something??
+from typing import Annotated
+
+
+# first define a class that inherits from llm.FunctionContext
+class AssistantFnc(llm.FunctionContext):
+    # the llm.ai_callable decorator marks this function as a tool available to the LLM
+    # by default, it'll use the docstring as the function's description
+    @llm.ai_callable()
+    async def get_weather(
+        self,
+        # by using the Annotated type, arg description and type are available to the LLM
+        location: Annotated[
+            str, llm.TypeInfo(description="The location to get the weather for")
+        ],
+    ):
+        """Called when the user asks about the weather. This function will return the weather for the given location."""
+        logger.info(f"getting weather for {location}")
+        url = f"https://wttr.in/{location}?format=%C+%t"
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    weather_data = await response.text()
+                    # response from the function call is returned to the LLM
+                    # as a tool response. The LLM's response will include this data
+                    return f"The weather in {location} is {weather_data}."
+                else:
+                    raise f"Failed to get weather data, status code: {response.status}"
+
+fnc_ctx = AssistantFnc()
+
 
 load_dotenv(dotenv_path=".env.local")
 logger = logging.getLogger("my-worker")
@@ -35,10 +66,10 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
     logger.info("starting multimodal agent")
 
     model = openai.realtime.RealtimeModel(
-        instructions=(
-            "You are a voice assistant created by LiveKit. Your interface with users will be voice. "
-            "You should use short and concise responses, and avoiding usage of unpronouncable punctuation. "
-            "You were created as a demo to showcase the capabilities of LiveKit's agents framework."
+        instructions=(      
+            "You are a voice assistant created by Play Lab at Olin College of Engineering."
+            "Your task is to help older people rehabiliate for exercise"
+            "You will call functions based off of what the user says"
         ),
         modalities=["audio", "text"],
     )
@@ -47,7 +78,7 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
     # upon session establishment
     chat_ctx = llm.ChatContext()
     chat_ctx.append(
-        text="Context about the user: you are talking to a software engineer who's building voice AI applications."
+        text=
         "Greet the user with a friendly greeting and ask how you can help them today.",
         role="assistant",
     )
@@ -55,6 +86,7 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
     agent = MultimodalAgent(
         model=model,
         chat_ctx=chat_ctx,
+        fnc_ctx=fnc_ctx
     )
     agent.start(ctx.room, participant)
 
