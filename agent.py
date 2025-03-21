@@ -91,7 +91,10 @@ class AssistantFnc(llm.FunctionContext):
 async def entrypoint(ctx: JobContext):
     """Main entrypoint for connecting the agent to the LiveKit room."""
     logger.info(f"Connecting to room: {ctx.room.name}")
+    logger.info(f"LiveKit server URL: {ctx.room.isconnected()}")  # Log server URL
+
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+    logger.info(f"Connected to LiveKit! Room: {ctx.room.name}, Participants: {len(ctx.room.remote_participants)}")
 
     participant = await ctx.wait_for_participant()
     run_multimodal_agent(ctx, participant)
