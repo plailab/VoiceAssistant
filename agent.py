@@ -33,6 +33,7 @@ class AssistantFnc(llm.FunctionContext):
         super().__init__()
         self.ctx = ctx  # Store the context
 
+    # makes this function available as a tool
     @llm.ai_callable()
     async def get_weather(
         self,
@@ -83,6 +84,40 @@ class AssistantFnc(llm.FunctionContext):
             )
 
             logger.info(f"Sent weather update to Swift: {weather_data}")
+
+        except Exception as e:
+            logger.error(f"Failed to send RPC to Swift: {e}")
+
+    @llm.ai_callable()
+    async def change_background(
+        self,
+        color: Annotated[
+            str, llm.TypeInfo(description="The color to change the background to")
+            # looks for something in this realm
+        ],
+    ): 
+
+        """Sends the weather update to the Swift app using LiveKit RPC."""
+        if not self.ctx.room.remote_participants:
+            logger.warning("No remote participants available to receive weather update.")
+            return
+
+        remote_participant = list(self.ctx.room.remote_participants.values())[0]
+
+        try:
+            payload = json.dumps({  # Ensure JSON serialization
+                "color": color
+            })
+
+            logger.info(f"Sending RPC with payload: {payload}")
+
+            await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=remote_participant.identity,
+                method="change_background",
+                payload=payload  # Ensure it's a JSON string
+            )
+
+            logger.info(f"Sent color to Swift: {color}")
 
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
