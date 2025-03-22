@@ -26,7 +26,12 @@ logger.setLevel(logging.INFO)
 
 
 class AssistantFnc(llm.FunctionContext):
-    """Handles LLM function calls, including weather retrieval and RPC communication."""
+    """
+    Handles LLM function calls, including weather retrieval and RPC communication.
+    
+    Args: context of what the user is saying and if it is applicable, will call a function
+
+    """
 
     def __init__(self, ctx: JobContext):
         """Store the JobContext so we can use it for RPC communication."""
@@ -88,6 +93,8 @@ class AssistantFnc(llm.FunctionContext):
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
 
+
+    
     @llm.ai_callable()
     async def change_background(
         self,
@@ -96,12 +103,23 @@ class AssistantFnc(llm.FunctionContext):
             # looks for something in this realm
         ],
     ): 
+        """
+        Sends the weather update to the Swift app using LiveKit RPC. (https://docs.livekit.io/home/client/data/rpc/)
+        
+        Args:
+        self (the instantiated class)
+        color (string): actual word (ex. blue, green, white, etc) taken from llm using its magical powers
+        
+        Returns:
+        happiness (when it works)
+        """
 
-        """Sends the weather update to the Swift app using LiveKit RPC."""
-        if not self.ctx.room.remote_participants:
+        # If there is no one, don't do anything
+        if not self.ctx.room.remote_participants: 
             logger.warning("No remote participants available to receive weather update.")
             return
 
+        # There will only be one person at a time
         remote_participant = list(self.ctx.room.remote_participants.values())[0]
 
         try:
@@ -146,6 +164,7 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
             "You are a voice assistant created by Play Lab at Olin College of Engineering."
             "Your task is to help older people rehabilitate through exercise."
             "You will call functions based on what the user says."
+            # STUFF WILL NEED TO BE PROMPTED BETTER IN THE FUTURE
         ),
         modalities=["audio", "text"],
     )
