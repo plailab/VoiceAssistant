@@ -140,6 +140,48 @@ class AssistantFnc(llm.FunctionContext):
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
 
+    @llm.ai_callable()
+    async def start_game(
+        self,
+        Yes: Annotated[
+            str, llm.TypeInfo(description="Starting the game (boolean),")
+            # looks for something in this realm
+        ],
+    ): 
+        """        
+        Args:
+        self (the instantiated class)
+        Yes (bool): True or False
+        
+        Returns:
+        happiness (when it works)
+        """
+
+        # If there is no one, don't do anything
+        if not self.ctx.room.remote_participants: 
+            logger.warning("No remote participants available to start the game.")
+            return
+
+        # There will only be one person at a time
+        remote_participant = list(self.ctx.room.remote_participants.values())[0]
+
+        try:
+            payload = json.dumps({  # Ensure JSON serialization
+                "Yes": Yes
+            })
+
+            logger.info(f"Sending RPC with payload: {payload}")
+
+            await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=remote_participant.identity,
+                method="start_game",
+                payload=payload  # Ensure it's a JSON string
+            )
+
+            logger.info(f"Sent color to Swift: {Yes}")
+
+        except Exception as e:
+            logger.error(f"Failed to send RPC to Swift: {e}")
 
 async def entrypoint(ctx: JobContext):
     """Main entrypoint for connecting the agent to the LiveKit room."""
