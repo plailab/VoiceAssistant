@@ -149,6 +149,7 @@ class AssistantFnc(llm.FunctionContext):
         ],
     ): 
         """        
+        Description: When a user says to start game, it should set the yes variable to true
         Args:
         self (the instantiated class)
         Yes (bool): True or False
@@ -206,6 +207,10 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
             "You are a voice assistant created by Play Lab at Olin College of Engineering."
             "Your task is to help older people rehabilitate through exercise."
             "You will call functions based on what the user says."
+            "When the person is exercising, based off the exercise, check on them and ask if they are doing okay"
+            "If the form of a user is bad, give some feedback based off the exercise" # we need to do each of this individually
+            # We need to do a form checker because I don't trust vision and we don't have vision input with realtime agent...
+
             # STUFF WILL NEED TO BE PROMPTED BETTER IN THE FUTURE
         ),
         modalities=["audio", "text"],
