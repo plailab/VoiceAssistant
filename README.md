@@ -7,7 +7,6 @@
   
 </p>
 
-
 PLAIful Movement Interface Multimodal Agent [Agents Framework](https://github.com/livekit/agents).
 
 ## Dev Setup
@@ -41,6 +40,7 @@ python3 agent.py dev
 ```
 
 This agent requires a frontend application to communicate with. Go to this github link to set up the front end
+
 ```bash
 https://github.com/plailab/PMI-IOS.git
 ```

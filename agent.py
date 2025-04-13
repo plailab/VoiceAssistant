@@ -37,63 +37,6 @@ class AssistantFnc(llm.FunctionContext):
         """Store the JobContext so we can use it for RPC communication."""
         super().__init__()
         self.ctx = ctx  # Store the context
-
-    # makes this function available as a tool
-    @llm.ai_callable()
-    async def get_weather(
-        self,
-        location: Annotated[
-            str, llm.TypeInfo(description="The location to get the weather for")
-        ],
-    ):
-        """Fetches the weather for a given location and sends it to the Swift app."""
-        logger.info(f"Fetching weather for {location}")
-
-        url = f"https://wttr.in/{location}?format=%C+%t"
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    weather_data = await response.text()
-                    weather_response = f"The weather in {location} is {weather_data}."
-                    logger.info(f"Weather data retrieved: {weather_response}")
-
-                    # Send the weather update to the Swift app
-                    await self.send_weather_to_swift(location, weather_response)
-
-                    return weather_response
-                else:
-                    error_msg = f"Failed to get weather data, status code: {response.status}"
-                    logger.error(error_msg)
-                    return error_msg
-
-    async def send_weather_to_swift(self, location: str, weather_data: str):
-        """Sends the weather update to the Swift app using LiveKit RPC."""
-        if not self.ctx.room.remote_participants:
-            logger.warning("No remote participants available to receive weather update.")
-            return
-
-        remote_participant = list(self.ctx.room.remote_participants.values())[0]
-
-        try:
-            payload = json.dumps({  # Ensure JSON serialization
-                "location": location,
-                "weather": weather_data
-            })
-
-            logger.info(f"Sending RPC with payload: {payload}")
-
-            await self.ctx.room.local_participant.perform_rpc(
-                destination_identity=remote_participant.identity,
-                method="display_weather",
-                payload=payload  # Ensure it's a JSON string
-            )
-
-            logger.info(f"Sent weather update to Swift: {weather_data}")
-
-        except Exception as e:
-            logger.error(f"Failed to send RPC to Swift: {e}")
-
-
     
     @llm.ai_callable()
     async def change_background(

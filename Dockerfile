@@ -48,4 +48,5 @@ COPY . .
 EXPOSE 8000
 
 # Run the application.
-CMD gunicorn 'PLAILab:app' --bind=0.0.0.0:8000
+# this is where the command is run, needed to know to actually run the server
+CMD ["python", "agent.py", "dev"]
