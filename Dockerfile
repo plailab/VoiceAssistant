@@ -48,5 +48,5 @@ COPY . .
 EXPOSE 8000
 
 # Run the application.
-# this is where the command is run, needed to know to actually run the server
+# this is where the command is run, needed to know to actually run the
 CMD ["python", "agent.py", "dev"]

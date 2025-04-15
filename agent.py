@@ -87,12 +87,12 @@ class AssistantFnc(llm.FunctionContext):
     async def start_game(
         self,
         Yes: Annotated[
-            str, llm.TypeInfo(description="Starting the game (boolean),")
+            str, llm.TypeInfo(description="Starting the game or exercising (boolean),")
             # looks for something in this realm
         ],
     ): 
         """        
-        Description: When a user says to start game, it should set the yes variable to true
+        Description: When a user says to start game or start exercising (anything similar to that), it should set the yes variable to true
         Args:
         self (the instantiated class)
         Yes (bool): True or False
@@ -122,7 +122,51 @@ class AssistantFnc(llm.FunctionContext):
                 payload=payload  # Ensure it's a JSON string
             )
 
-            logger.info(f"Sent color to Swift: {Yes}")
+            logger.info(f"Sent start game to Swift: {Yes}")
+
+        except Exception as e:
+            logger.error(f"Failed to send RPC to Swift: {e}")
+
+    @llm.ai_callable()
+    async def change_reps(
+        self,
+        reps: Annotated[
+            str, llm.TypeInfo(description="Changing the number of reps based off of user feedback (int),")
+            # looks for something in this realm
+        ],
+    ): 
+        """        
+        Description: When a user says they want to change the number of reps, change it to the number they said
+        Args:
+        self (the instantiated class)
+        reps: (the number of reps the user asked for)
+        
+        Returns:
+        happiness (when it works)
+        """
+
+        # If there is no one, don't do anything
+        if not self.ctx.room.remote_participants: 
+            logger.warning("No remote participants available to start the game.")
+            return
+
+        # There will only be one person at a time
+        remote_participant = list(self.ctx.room.remote_participants.values())[0]
+
+        try:
+            payload = json.dumps({  # Ensure JSON serialization
+                "reps": reps
+            })
+
+            logger.info(f"Sending RPC with payload: {payload}")
+
+            await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=remote_participant.identity,
+                method="change_reps",
+                payload=payload  # Ensure it's a JSON string
+            )
+
+            logger.info(f"Sent rep number: {reps}")
 
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
