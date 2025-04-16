@@ -16,7 +16,7 @@ from livekit.agents import (
 from livekit.agents.multimodal import MultimodalAgent
 from livekit.plugins import openai
 import json  # Import JSON for serialization
-
+import asyncio
 
 # Load environment variables
 load_dotenv(dotenv_path=".env.local")
@@ -24,6 +24,7 @@ load_dotenv(dotenv_path=".env.local")
 logger = logging.getLogger("my-worker")
 logger.setLevel(logging.INFO)
 
+frontendData = {}
 
 class AssistantFnc(llm.FunctionContext):
     """
@@ -132,7 +133,35 @@ async def entrypoint(ctx: JobContext):
     logger.info(f"Connecting to room: {ctx.room.name}")
     logger.info(f"LiveKit server URL: {ctx.room.isconnected()}")  # Log server URL
 
-    await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
+    # ✅ Fixed: Use sync wrapper with asyncio.create_task
+    @ctx.room.on("data_received")
+    def on_data_received(data: rtc.DataPacket):
+        async def handle_data():
+            try:
+                # Parse the incoming data
+                logger.info(f"Raw data received: {data}")
+                
+                # Decode the data from bytes to string and load as JSON
+                parsed_data = json.loads(data.data)
+                logger.info(f"Parsed data: {parsed_data}")
+                frontendData.update(parsed_data)
+                logger.info(f"Updated frontendData: {frontendData}")
+                
+            except Exception as e:
+                logger.error(f"Failed to handle incoming data: {e}")
+        
+        asyncio.create_task(handle_data())
+
+    @ctx.room.on("track_subscribed")
+    def on_track_subscribed(
+        track: rtc.Track,
+        publication: rtc.TrackPublication,
+        participant: rtc.RemoteParticipant,
+    ):
+        logger.info(f"Track subscribed: {track.kind} from participant {participant.identity}")
+
+    # Connect to the room (auto-subscribe to all tracks)
+    await ctx.connect(auto_subscribe=AutoSubscribe.SUBSCRIBE_ALL)
     logger.info(f"Connected to LiveKit! Room: {ctx.room.name}, Participants: {len(ctx.room.remote_participants)}")
 
     participant = await ctx.wait_for_participant()
