@@ -84,6 +84,45 @@ class AssistantFnc(llm.FunctionContext):
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
 
+
+    @llm.ai_callable()
+    async def select_exercise(
+        self,
+        exercise: Annotated[
+            str, llm.TypeInfo(description="The exercise the user selected out of the available exercises: ['Shoulder Raises', 'Leg Raises', 'Cross Body Reach']")  # looks for something in this realm
+        ],
+    ):
+        """
+        Description: When a user says they want to do an exercise, select the exercise they said given these available exercises: ["Shoulder Raises", "Leg Raises", "Cross Body Reach"]
+        Args:
+        self (the instantiated class)
+        exercise (string): the exercise the user asked for out of the available exercises
+        """
+
+        # If there is no one, don't do anything
+        if not self.ctx.room.remote_participants: 
+            logger.warning("No remote participants available to start the game.")
+            return
+        
+        # There will only be one person at a time
+        remote_participant = list(self.ctx.room.remote_participants.values())[0]
+
+        try:
+            payload = json.dumps({
+                "exercise": exercise
+            })
+
+            logger.info(f"Sending RPC with payload: {payload}")
+
+            await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=remote_participant.identity,
+                method="select_exercise",
+                payload=payload  # Ensure it's a JSON string
+            )
+            logger.info(f"Sent exercise to Swift: {exercise}")
+        except Exception as e:
+            logger.error(f"Failed to send RPC to Swift: {e}")
+
     @llm.ai_callable()
     async def start_game(
         self,
@@ -177,7 +216,6 @@ async def entrypoint(ctx: JobContext):
     logger.info(f"Connecting to room: {ctx.room.name}")
     logger.info(f"LiveKit server URL: {ctx.room.isconnected()}")  # Log server URL
 
-    # ✅ Fixed: Use sync wrapper with asyncio.create_task
     @ctx.room.on("data_received")
     def on_data_received(data: rtc.DataPacket):
         async def handle_data():
