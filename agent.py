@@ -172,6 +172,95 @@ class AssistantFnc(llm.FunctionContext):
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
 
+
+    @llm.ai_callable()
+    async def exit_game(
+        self,
+        Yes: Annotated[
+            str, llm.TypeInfo(description="exiting the game or exercise (boolean),")
+            # looks for something in this realm
+        ],
+    ): 
+        """        
+        Description: When a user says to exit game or exit exercising (anything similar to that), it should set the yes variable to true
+        Args:
+        self (the instantiated class)
+        Yes (bool): True or False
+        
+        Returns:
+        happiness (when it works)
+        """
+
+        # If there is no one, don't do anything
+        if not self.ctx.room.remote_participants: 
+            logger.warning("No remote participants available to start the game.")
+            return
+
+        # There will only be one person at a time
+        remote_participant = list(self.ctx.room.remote_participants.values())[0]
+
+        try:
+            payload = json.dumps({  # Ensure JSON serialization
+                "Yes": Yes
+            })
+
+            logger.info(f"Sending RPC with payload: {payload}")
+
+            await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=remote_participant.identity,
+                method="exit_game",
+                payload=payload  # Ensure it's a JSON string
+            )
+
+            logger.info(f"Sent exit game to Swift: {Yes}")
+
+        except Exception as e:
+            logger.error(f"Failed to send RPC to Swift: {e}")
+
+    @llm.ai_callable()
+    async def skip_rest(
+        self,
+        Yes: Annotated[
+            str, llm.TypeInfo(description="skipping the rest (boolean),")
+            # looks for something in this realm
+        ],
+    ): 
+        """        
+        Description: When a user says to skip the rest (anything similar to that), it should set the yes variable to true
+        Args:
+        self (the instantiated class)
+        Yes (bool): True or False
+        
+        Returns:
+        happiness (when it works)
+        """
+
+        # If there is no one, don't do anything
+        if not self.ctx.room.remote_participants: 
+            logger.warning("No remote participants available to start the game.")
+            return
+
+        # There will only be one person at a time
+        remote_participant = list(self.ctx.room.remote_participants.values())[0]
+
+        try:
+            payload = json.dumps({  # Ensure JSON serialization
+                "Yes": Yes
+            })
+
+            logger.info(f"Sending RPC with payload: {payload}")
+
+            await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=remote_participant.identity,
+                method="skip_rest",
+                payload=payload  # Ensure it's a JSON string
+            )
+
+            logger.info(f"Sent exit game to Swift: {Yes}")
+
+        except Exception as e:
+            logger.error(f"Failed to send RPC to Swift: {e}")
+            
 async def entrypoint(ctx: JobContext):
     """Main entrypoint for connecting the agent to the LiveKit room."""
     logger.info(f"Connecting to room: {ctx.room.name}")
