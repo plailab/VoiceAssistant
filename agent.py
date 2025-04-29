@@ -120,6 +120,8 @@ class AssistantFnc(llm.FunctionContext):
                 payload=payload  # Ensure it's a JSON string
             )
             logger.info(f"Sent exercise to Swift: {exercise}")
+
+            return 
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
 
@@ -163,6 +165,7 @@ class AssistantFnc(llm.FunctionContext):
             )
 
             logger.info(f"Sent start game to Swift: {Yes}")
+            return json.dumps(frontendData)
 
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
@@ -258,12 +261,14 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
 
     model = openai.realtime.RealtimeModel(
         instructions=(
-            "You are a voice assistant created by Play Lab at Olin College of Engineering."
+            "You are a voice assistant created by Plai Lab at Olin College of Engineering."
             "Your task is to help older people rehabilitate through exercise."
             "You will call functions based on what the user says."
             "When the person is exercising, based off the exercise, check on them and ask if they are doing okay"
             "If the form of a user is bad, give some feedback based off the exercise" # we need to do each of this individually
             # We need to do a form checker because I don't trust vision and we don't have vision input with realtime agent...
+
+            "Whenever the user starts doing an exercise, instruct them to refer to the animation for how to do it, move your exercising body parts to follow the elements on the screen, and that they can ask to skip rest"
 
             # STUFF WILL NEED TO BE PROMPTED BETTER IN THE FUTURE
         ),
@@ -272,7 +277,13 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
 
     chat_ctx = llm.ChatContext()
     chat_ctx.append(
-        text="Greet the user with a friendly greeting and ask how you can help them today.",
+        text=(
+            "When you are initialized, say the following exactly as written, without adding or changing anything:"
+            "Welcome! Let me guide you through the app. "
+            "You can talk to me directly through voice to start exercises on this app. Tap 'Play Start Exercising' to begin your workout, use 'Next Exercise' to explore different exercises, "
+            "and adjust the slider to set the number of reps per set. The exercises available are: "
+            "['Shoulder Raises', 'Leg Raises', 'Cross Body Reach']. Let's get started! "
+        ),
         role="assistant",
     )
 
@@ -287,7 +298,6 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
 
     agent.start(ctx.room, participant)
     agent.generate_reply()  # Agent starts by greeting the user
-
 
 if __name__ == "__main__":
     cli.run_app(
