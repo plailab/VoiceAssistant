@@ -268,6 +268,8 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
             "If the form of a user is bad, give some feedback based off the exercise" # we need to do each of this individually
             # We need to do a form checker because I don't trust vision and we don't have vision input with realtime agent...
 
+            "Whenever the user starts doing an exercise, instruct them to refer to the animation for how to do it, and that they can ask to skip rest"
+
             # STUFF WILL NEED TO BE PROMPTED BETTER IN THE FUTURE
         ),
         modalities=["audio", "text"],
