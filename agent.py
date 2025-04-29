@@ -120,6 +120,8 @@ class AssistantFnc(llm.FunctionContext):
                 payload=payload  # Ensure it's a JSON string
             )
             logger.info(f"Sent exercise to Swift: {exercise}")
+
+            return 
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
 
@@ -163,6 +165,7 @@ class AssistantFnc(llm.FunctionContext):
             )
 
             logger.info(f"Sent start game to Swift: {Yes}")
+            return json.dumps(frontendData)
 
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
