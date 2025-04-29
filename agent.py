@@ -258,7 +258,7 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
 
     model = openai.realtime.RealtimeModel(
         instructions=(
-            "You are a voice assistant created by Play Lab at Olin College of Engineering."
+            "You are a voice assistant created by Plai Lab at Olin College of Engineering."
             "Your task is to help older people rehabilitate through exercise."
             "You will call functions based on what the user says."
             "When the person is exercising, based off the exercise, check on them and ask if they are doing okay"
@@ -272,7 +272,13 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
 
     chat_ctx = llm.ChatContext()
     chat_ctx.append(
-        text="Greet the user with a friendly greeting and ask how you can help them today.",
+        text=(
+            "When you are initialized, say the following exactly as written, without adding or changing anything:"
+            "Welcome! Let me guide you through the app. "
+            "You can talk to me directly through voice to start exercises on this app. Tap 'Play Start Exercising' to begin your workout, use 'Next Exercise' to explore different exercises, "
+            "and adjust the slider to set the number of reps per set. The exercises available are: "
+            "['Shoulder Raises', 'Leg Raises', 'Cross Body Reach']. Let's get started! "
+        ),
         role="assistant",
     )
 
@@ -287,7 +293,6 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
 
     agent.start(ctx.room, participant)
     agent.generate_reply()  # Agent starts by greeting the user
-
 
 if __name__ == "__main__":
     cli.run_app(
