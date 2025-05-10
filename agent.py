@@ -309,17 +309,36 @@ async def entrypoint(ctx: JobContext):
     def on_data_received(data: rtc.DataPacket):
         async def handle_data():
             try:
-                # Parse the incoming data
                 logger.info(f"Raw data received: {data}")
-                
-                # Decode the data from bytes to string and load as JSON
                 parsed_data = json.loads(data.data)
                 logger.info(f"Parsed data: {parsed_data}")
+
                 frontendData.update(parsed_data)
                 logger.info(f"Updated frontendData: {frontendData}")
-                
+
+                # Now, inject into chat context in a *readable* way
+                if global_chat_ctx is not None:
+                    if 'current_exercise' in parsed_data:
+                        exercise = parsed_data['current_exercise']
+                        global_chat_ctx.append(
+                            text=f"The user has selected the exercise: {exercise}.",
+                            role="system"
+                        )
+                        logger.info(f"Appended exercise update to chat context: {exercise}")
+
+                    if 'reps' in parsed_data:
+                        reps = parsed_data['reps']
+                        global_chat_ctx.append(
+                            text=f"The user set the number of repetitions per set to {reps}.",
+                            role="system"
+                        )
+                        logger.info(f"Appended reps update to chat context: {reps}")
+
+                    # You can add more handling here if you want to support more frontend fields
+
             except Exception as e:
                 logger.error(f"Failed to handle incoming data: {e}")
+
         
         asyncio.create_task(handle_data())
 
@@ -344,7 +363,7 @@ async def entrypoint(ctx: JobContext):
 def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
     """Initializes the multimodal AI agent with voice and text processing."""
     logger.info("Starting multimodal agent...")
-
+    global global_chat_ctx
     model = openai.realtime.RealtimeModel(
         instructions=(
             "You are a voice assistant created by Play Lab at Olin College of Engineering."
@@ -364,6 +383,7 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
         text="Greet the user with a friendly greeting and ask how you can help them today.",
         role="assistant",
     )
+    global_chat_ctx = chat_ctx
 
     # Pass `ctx` to AssistantFnc so it has access to JobContext for RPC calls
     fnc_ctx = AssistantFnc(ctx)
@@ -384,3 +404,4 @@ if __name__ == "__main__":
             entrypoint_fnc=entrypoint,
         )
     )
+ 
