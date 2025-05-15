@@ -168,6 +168,95 @@ class AssistantFnc(llm.FunctionContext):
         except Exception as e:
             logger.error(f"Failed to send RPC to Swift: {e}")
 
+
+    @llm.ai_callable()
+    async def exit_game(
+        self,
+        Yes: Annotated[
+            str, llm.TypeInfo(description="exiting the game or exercise (boolean),")
+            # looks for something in this realm
+        ],
+    ): 
+        """        
+        Description: When a user says to exit game or exit exercising (anything similar to that), it should set the yes variable to true
+        Args:
+        self (the instantiated class)
+        Yes (bool): True or False
+        
+        Returns:
+        happiness (when it works)
+        """
+
+        # If there is no one, don't do anything
+        if not self.ctx.room.remote_participants: 
+            logger.warning("No remote participants available to start the game.")
+            return
+
+        # There will only be one person at a time
+        remote_participant = list(self.ctx.room.remote_participants.values())[0]
+
+        try:
+            payload = json.dumps({  # Ensure JSON serialization
+                "Yes": Yes
+            })
+
+            logger.info(f"Sending RPC with payload: {payload}")
+
+            await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=remote_participant.identity,
+                method="exit_game",
+                payload=payload  # Ensure it's a JSON string
+            )
+
+            logger.info(f"Sent exit game to Swift: {Yes}")
+
+        except Exception as e:
+            logger.error(f"Failed to send RPC to Swift: {e}")
+
+    @llm.ai_callable()
+    async def skip_rest(
+        self,
+        Yes: Annotated[
+            str, llm.TypeInfo(description="skipping the rest (boolean),")
+            # looks for something in this realm
+        ],
+    ): 
+        """        
+        Description: When a user says to skip the rest (anything similar to that), it should set the yes variable to true
+        Args:
+        self (the instantiated class)
+        Yes (bool): True or False
+        
+        Returns:
+        happiness (when it works)
+        """
+
+        # If there is no one, don't do anything
+        if not self.ctx.room.remote_participants: 
+            logger.warning("No remote participants available to start the game.")
+            return
+
+        # There will only be one person at a time
+        remote_participant = list(self.ctx.room.remote_participants.values())[0]
+
+        try:
+            payload = json.dumps({  # Ensure JSON serialization
+                "Yes": Yes
+            })
+
+            logger.info(f"Sending RPC with payload: {payload}")
+
+            await self.ctx.room.local_participant.perform_rpc(
+                destination_identity=remote_participant.identity,
+                method="skip_rest",
+                payload=payload  # Ensure it's a JSON string
+            )
+
+            logger.info(f"Sent exit game to Swift: {Yes}")
+
+        except Exception as e:
+            logger.error(f"Failed to send RPC to Swift: {e}")
+            
 async def entrypoint(ctx: JobContext):
     """Main entrypoint for connecting the agent to the LiveKit room."""
     logger.info(f"Connecting to room: {ctx.room.name}")
@@ -177,17 +266,36 @@ async def entrypoint(ctx: JobContext):
     def on_data_received(data: rtc.DataPacket):
         async def handle_data():
             try:
-                # Parse the incoming data
                 logger.info(f"Raw data received: {data}")
-                
-                # Decode the data from bytes to string and load as JSON
                 parsed_data = json.loads(data.data)
                 logger.info(f"Parsed data: {parsed_data}")
+
                 frontendData.update(parsed_data)
                 logger.info(f"Updated frontendData: {frontendData}")
-                
+
+                # Now, inject into chat context in a *readable* way
+                if global_chat_ctx is not None:
+                    if 'current_exercise' in parsed_data:
+                        exercise = parsed_data['current_exercise']
+                        global_chat_ctx.append(
+                            text=f"The user has selected the exercise: {exercise}.",
+                            role="system"
+                        )
+                        logger.info(f"Appended exercise update to chat context: {exercise}")
+
+                    if 'reps' in parsed_data:
+                        reps = parsed_data['reps']
+                        global_chat_ctx.append(
+                            text=f"The user set the number of repetitions per set to {reps}.",
+                            role="system"
+                        )
+                        logger.info(f"Appended reps update to chat context: {reps}")
+
+                    # You can add more handling here if you want to support more frontend fields
+
             except Exception as e:
                 logger.error(f"Failed to handle incoming data: {e}")
+
         
         asyncio.create_task(handle_data())
 
@@ -212,7 +320,7 @@ async def entrypoint(ctx: JobContext):
 def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
     """Initializes the multimodal AI agent with voice and text processing."""
     logger.info("Starting multimodal agent...")
-
+    global global_chat_ctx
     model = openai.realtime.RealtimeModel(
         instructions=(
             "You are a voice assistant created by Plai Lab at Olin College of Engineering."
@@ -240,6 +348,7 @@ def run_multimodal_agent(ctx: JobContext, participant: rtc.RemoteParticipant):
         ),
         role="assistant",
     )
+    global_chat_ctx = chat_ctx
 
     # Pass `ctx` to AssistantFnc so it has access to JobContext for RPC calls
     fnc_ctx = AssistantFnc(ctx)
@@ -259,3 +368,4 @@ if __name__ == "__main__":
             entrypoint_fnc=entrypoint,
         )
     )
+ 
